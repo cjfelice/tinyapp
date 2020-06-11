@@ -43,7 +43,8 @@ const httpAdd = function(string) {
   } else {
     return 'http://' + string;
   }
-}
+};
+
 
 app.set('view engine', 'ejs');
 
@@ -51,6 +52,20 @@ const urlDatabase = {
   'b2xVn2': 'http://www.lighthouselabs.com',
   '9sm5xK': 'http://www.google.com'
 };
+
+
+const urlForUser = function(id) {
+  let newObj = {};
+  for (const item in urlDatabase) {
+    if (urlDatabase[item].userID === id) {
+      newObj[item] = urlDatabase[item];
+    }
+  }
+  console.log(newObj);
+  return newObj;
+};
+
+urlForUser('g@man.com');
 
 const users = { 
   "userRandomID": {
@@ -78,7 +93,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  let templateVars = { urls: urlDatabase, userID: req.cookies['user_id'], users: users };
+  let templateVars = { urls: urlForUser(req.cookies['user_id']), userID: req.cookies['user_id'], users: users };
   res.render('urls_index', templateVars);
 });
 
@@ -98,16 +113,19 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], userID: req.cookies['user_id'], users: users };
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, userID: req.cookies['user_id'], users: users };
   res.render("urls_show", templateVars);
 });
 
 app.post("/urls", (req, res) => {
+  if (req.cookies['user_id']) {
   const newLong = httpAdd(req.body.longURL);
   const newShort = generateRandomString();
-  console.log(newLong);
-  urlDatabase[newShort] = newLong;
-  res.redirect(`/urls/${newShort}`);        
+  urlDatabase[newShort] = { 'longURL': newLong, 'userID': req.cookies['user_id']};
+  res.redirect(`/urls/${newShort}`);
+  } else {
+    res.redirect('/login');
+  } 
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -146,13 +164,12 @@ app.post('/register', (req, res) => {
   } else {
     users[newID] = { id: newID, email: req.body.email, password: req.body.password };
     res.cookie('user_id', users[newID].email);
-    console.log(users);
     res.redirect("/urls");
   }
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
