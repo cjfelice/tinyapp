@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const PORT = 8080;
+const bcrypt = require('bcrypt');
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -61,11 +62,9 @@ const urlForUser = function(id) {
       newObj[item] = urlDatabase[item];
     }
   }
-  console.log(newObj);
   return newObj;
 };
 
-urlForUser('g@man.com');
 
 const users = { 
   "userRandomID": {
@@ -113,7 +112,7 @@ app.get("/login", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, userID: req.cookies['user_id'], users: users };
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, userID: req.cookies['user_id'], users: users, myUrl: urlForUser(req.cookies['user_id']) };
   res.render("urls_show", templateVars);
 });
 
@@ -129,12 +128,22 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  delete urlDatabase[req.params.shortURL];
+  const userID = req.cookies['user_id'];
+  const myUrls = urlForUser(req.cookies['user_id']);
+  const pageTitle = req.params.shortURL;
+  if (userID && myUrls[pageTitle]) {
+    delete urlDatabase[req.params.shortURL];
+  }
   res.redirect("/urls");
 });
 
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL] = httpAdd(req.body.longURL);
+  const userID = req.cookies['user_id'];
+  const myUrls = urlForUser(req.cookies['user_id']);
+  const pageTitle = req.params.shortURL;
+  if (userID && myUrls[pageTitle]) {
+    urlDatabase[req.params.shortURL] = httpAdd(req.body.longURL);
+  }
   res.redirect("/urls");
 });
 
@@ -144,12 +153,15 @@ app.post("/login", (req, res) => {
   const ID = idLookup('email', email);
   if (emailLookup(email)) {
     res.sendStatus(403);
-  } else if (users[ID].password !== password) {
-    res.sendStatus(403);
-  } else {
+  }
+  bcrypt.compare(password, users[ID].password, function(error, hash) {
+    if (error) {
+      res.sendStatus(403);
+    } else {
     res.cookie('user_id', email);
     res.redirect("/urls");
-  }
+    }
+  });
 });
 
 app.post("/logout", (req, res) => {
@@ -162,7 +174,14 @@ app.post('/register', (req, res) => {
   if (!req.body.email || !req.body.password || !emailLookup(req.body.email)) {
     res.sendStatus(400);
   } else {
-    users[newID] = { id: newID, email: req.body.email, password: req.body.password };
+    users[newID] = { id: newID, email: req.body.email};
+    bcrypt.hash(req.body.password, 10, function(err, hash) {
+      if (err) {
+         throw err;
+      }
+      users[newID].password = hash;
+      return;
+    });
     res.cookie('user_id', users[newID].email);
     res.redirect("/urls");
   }
