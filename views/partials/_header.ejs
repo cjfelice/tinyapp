@@ -11,7 +11,7 @@
         <a class="nav-item nav-link" href="/register">Register</a>
         <div class= "pull-right">
           <% if(userID){ %>
-            <h4><form method="POST" action="/logout"><span class="badge badge-pill badge-dark" style="margin-top: 3px; margin-left: 35px"><%= userID %></span>
+            <h4><form method="POST" action="/logout"><span class="badge badge-dark" style="margin-top: 3px; margin-left: 35px"><%= userID %></span>
           <button class="btn btn-outline-secondary" style="align-self: auto;" type="submit">Logout</button></form></h4>
           <% } else{ %>
             <div class="input-group mb-0">
