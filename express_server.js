@@ -20,48 +20,42 @@ app.use(cookieSession({
 
 app.set('view engine', 'ejs');
 
-const urlDatabase = {
-  'b2xVn2': 'http://www.lighthouselabs.com',
-  '9sm5xK': 'http://www.google.com'
-};
+const urlDatabase = {};
 
-const users = {
-  "userRandomID": {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
-  },
-  "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  }
-};
+const users = {};
 
+//redirects to a page that shows login options or a logged in user's urls.
 app.get('/', (req, res) => {
   res.redirect("/urls");
 });
 
+//renders url index.
 app.get('/urls', (req, res) => {
   let templateVars = { urls: urlForUser(req.session.user_id, urlDatabase), userID: req.session.user_id, users: users };
   res.render('urls_index', templateVars);
 });
 
+//renders new url form page.
 app.get("/urls/new", (req, res) => {
   let templateVars = { urls: urlDatabase, userID: req.session.user_id, users: users };
   res.render("urls_new", templateVars);
 });
 
+//renders registration form for new account.
+//if user is already logged in, they can still create a new account with a different email.
 app.get("/register", (req, res) => {
   let templateVars = { urls: urlDatabase, userID: req.session.user_id, users: users };
   res.render("urls_registration", templateVars);
 });
 
+//renders login form page.
 app.get("/login", (req, res) => {
   let templateVars = { urls: urlDatabase, userID: req.session.user_id, users: users };
   res.render("urls_login", templateVars);
 });
 
+//directs a user to an existing short url edit page.
+//or directs to error page if requested tinyurl doesnt exist.
 app.get("/urls/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL]) {
     let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, userID: req.session.user_id, users: users, myUrl: urlForUser(req.session.user_id, urlDatabase) };
@@ -72,6 +66,7 @@ app.get("/urls/:shortURL", (req, res) => {
   }
 });
 
+//redirects tinyurl link to previopusly set url.
 app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL]) {
     const longURL = urlDatabase[req.params.shortURL].longURL;
@@ -82,16 +77,19 @@ app.get("/u/:shortURL", (req, res) => {
   }
 });
 
+//renders login error site.
 app.get("/userError", (req, res) => {
   let templateVars = { urls: urlDatabase, userID: req.session.user_id, users: users };
   res.render("urls_problem", templateVars);
 });
 
+//renders registration error site.
 app.get("/regError", (req, res) => {
   let templateVars = { urls: urlDatabase, userID: req.session.user_id, users: users };
   res.render("urls_regErr", templateVars);
 });
 
+//adds new tinyurl into the database if user is logged in.
 app.post("/urls", (req, res) => {
   if (req.session.user_id) {
     const newLong = httpAdd(req.body.longURL);
@@ -103,6 +101,7 @@ app.post("/urls", (req, res) => {
   }
 });
 
+//removes tinyurl from database if user is logged into the creating account.
 app.post("/urls/:shortURL/delete", (req, res) => {
   const userID = req.session.user_id;
   const myUrls = urlForUser(req.session.user_id, urlDatabase);
@@ -113,6 +112,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+//edits tinyurl if user is logged into the creating account.
 app.post("/urls/:shortURL", (req, res) => {
   const userID = req.session.user_id;
   const myUrls = urlForUser(req.session.user_id, urlDatabase);
@@ -123,6 +123,8 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls");
 });
 
+//logs a user into an existing account with email & password
+//or gives errors if incorrect info is entered.
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -140,11 +142,14 @@ app.post("/login", (req, res) => {
   });
 });
 
+//removes user id cookies and logs a user out.
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/urls");
 });
 
+//creates a new account and logs a user in.
+//if email exists for another account or form is unfilled throws error.
 app.post('/register', (req, res) => {
   const newID = generateRandomString();
   if (!req.body.email || !req.body.password || emailLookup(req.body.email, users)) {
